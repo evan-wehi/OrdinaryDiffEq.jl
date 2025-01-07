@@ -247,7 +247,29 @@ function resize!(integrator::ODEIntegrator, i::NTuple{N, Int}) where {N}
     resize_non_user_cache!(integrator, cache, i)
 end
 
-# default fallback
+has_call_back(continuous_callbacks, tgt_cb::VectorContinuousCallback) = continuous_callbacks !== nothing && tgt_cb ∈ continuous_callbacks
+
+function resize!(integrator::ODEIntegrator, cb::VectorContinuousCallback, i::Int)
+    callbacks = integrator.opts.callback.continuous_callbacks
+    if !has_call_back(callbacks, cb)
+      error("Attempt to resize nonexistent callback")
+    end
+    cb.len = i
+    max_cache_len = DiffEqBase.max_vector_callback_length_int(callbacks...)
+    resize_callback_cache!(integrator.callback_cache, max_cache_len)
+  end
+
+function resize_callback_cache!(cache::DiffEqBase.CallbackCache, i::Int)
+    if i == length(cache.tmp_condition)
+        return
+    end
+    Base.resize!(cache.tmp_condition, i)
+    Base.resize!(cache.previous_condition, i)
+    Base.resize!(cache.next_sign, i)
+    Base.resize!(cache.prev_sign, i)
+  end
+
+  # default fallback
 resize_f!(f, i) = nothing
 
 function resize_f!(f::SplitFunction, i)
